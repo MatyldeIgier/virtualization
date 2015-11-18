@@ -218,6 +218,14 @@ public class RaycastRenderer extends Renderer implements TFChangeListener {
 
     }
 
+    
+    //Visualization variables
+    public int visuChoice = 0; //0 = slicer
+                               //1 = MIP
+                               //2 = Compositing
+                               //3 = 2D transfer function
+    public boolean shadingOn = false; // Volum shading
+    
     @Override
     public void visualize(GL2 gl) {
 
@@ -231,7 +239,16 @@ public class RaycastRenderer extends Renderer implements TFChangeListener {
         gl.glGetDoublev(GL2.GL_MODELVIEW_MATRIX, viewMatrix, 0);
 
         long startTime = System.currentTimeMillis();
-        slicer(viewMatrix);    
+        switch(visuChoice){
+            case 0 :
+                slicer(viewMatrix);
+                break;
+            case 1 :
+                break;
+            default :
+                break;
+        }
+           
         
         long endTime = System.currentTimeMillis();
         double runningTime = (endTime - startTime);
