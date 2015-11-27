@@ -33,7 +33,7 @@ public class RaycastRenderer extends Renderer implements TFChangeListener {
     
     public RaycastRenderer() {
         panel = new RaycastRendererPanel(this);
-        panel.setSpeedLabel("0");
+        panel.setSpeedLabel("0",false);
     }
 
     public void setVolume(Volume vol) {
@@ -193,7 +193,7 @@ public class RaycastRenderer extends Renderer implements TFChangeListener {
             for (int i = 0; i < image.getWidth(); i++) {
                 int val = 0;
                 
-                for(int k = -10; k < 10; k++){
+                for(int k = -100; k < 100; k++){
                     pixelCoord[0] = uVec[0] * (i - imageCenter) + vVec[0] * (j - imageCenter)
                             + volumeCenter[0] + viewVec[0]*k;
                     pixelCoord[1] = uVec[1] * (i - imageCenter) + vVec[1] * (j - imageCenter)
@@ -201,7 +201,8 @@ public class RaycastRenderer extends Renderer implements TFChangeListener {
                     pixelCoord[2] = uVec[2] * (i - imageCenter) + vVec[2] * (j - imageCenter)
                             + volumeCenter[2] + viewVec[2]*k;
 
-                    if(getVoxel(pixelCoord) > val) val=getVoxel(pixelCoord);
+                    int v = getVoxel(pixelCoord);
+                    if(v > val) val=v;
                 }
                 
                 // Map the intensity to a grey value by linear scaling
@@ -211,6 +212,79 @@ public class RaycastRenderer extends Renderer implements TFChangeListener {
                 voxelColor.a = val > 0 ? 1.0 : 0.0;  // this makes intensity 0 completely transparent and the rest opaque
                 // Alternatively, apply the transfer function to obtain a color
                 //voxelColor = tFunc.getColor(val);
+                
+                
+                // BufferedImage expects a pixel color packed as ARGB in an int
+                int c_alpha = voxelColor.a <= 1.0 ? (int) Math.floor(voxelColor.a * 255) : 255;
+                int c_red = voxelColor.r <= 1.0 ? (int) Math.floor(voxelColor.r * 255) : 255;
+                int c_green = voxelColor.g <= 1.0 ? (int) Math.floor(voxelColor.g * 255) : 255;
+                int c_blue = voxelColor.b <= 1.0 ? (int) Math.floor(voxelColor.b * 255) : 255;
+                int pixelColor = (c_alpha << 24) | (c_red << 16) | (c_green << 8) | c_blue;
+                image.setRGB(i, j, pixelColor);
+            }
+        }
+        
+        //System.out.println("View vect : ("+ viewVec[0]+","+viewVec[1]+","+viewVec[2]+")");
+        //System.out.println("U vect : ("+ uVec[0]+","+uVec[1]+","+uVec[2]+")");
+        //System.out.println("V vect : ("+ vVec[0]+","+vVec[1]+","+vVec[2]+")");
+
+    }
+    
+    void compositing(double[] viewMatrix) {
+
+        // clear image
+        for (int j = 0; j < image.getHeight(); j++) {
+            for (int i = 0; i < image.getWidth(); i++) {
+                image.setRGB(i, j, 0);
+            }
+        }
+
+        // vector uVec and vVec define a plane through the origin, 
+        // perpendicular to the view vector viewVec
+        double[] viewVec = new double[3];//faire moyenne sur ça
+        double[] uVec = new double[3];
+        double[] vVec = new double[3];
+        VectorMath.setVector(viewVec, viewMatrix[2], viewMatrix[6], viewMatrix[10]);
+        VectorMath.setVector(uVec, viewMatrix[0], viewMatrix[4], viewMatrix[8]);
+        VectorMath.setVector(vVec, viewMatrix[1], viewMatrix[5], viewMatrix[9]);
+
+        // image is square
+        int imageCenter = image.getWidth() / 2;
+
+        double[] pixelCoord = new double[3];
+        double[] volumeCenter = new double[3];
+        VectorMath.setVector(volumeCenter, volume.getDimX() / 2, volume.getDimY() / 2, volume.getDimZ() / 2);
+
+        // sample on a plane through the origin of the volume data
+        double max = volume.getMaximum();
+        TFColor voxelColor = new TFColor();
+
+        
+        for (int j = 0; j < image.getHeight(); j++) {
+            for (int i = 0; i < image.getWidth(); i++) {
+                
+                double val = 0;
+                
+                for(int k = -50; k < 50; k++){
+                    pixelCoord[0] = uVec[0] * (i - imageCenter) + vVec[0] * (j - imageCenter)
+                            + volumeCenter[0] + viewVec[0]*k;
+                    pixelCoord[1] = uVec[1] * (i - imageCenter) + vVec[1] * (j - imageCenter)
+                            + volumeCenter[1] + viewVec[1]*k;
+                    pixelCoord[2] = uVec[2] * (i - imageCenter) + vVec[2] * (j - imageCenter)
+                            + volumeCenter[2] + viewVec[2]*k;
+
+                    int v = getVoxel(pixelCoord);
+                    double opacity = tFunc.getColor(v).a;
+                    val = v*opacity+(1-opacity)*val;
+                }
+                
+                // Map the intensity to a grey value by linear scaling
+                //voxelColor.r = val/max;
+                //voxelColor.g = voxelColor.r;
+                //voxelColor.b = voxelColor.r;
+                //voxelColor.a = val > 0 ? 1.0 : 0.0;  // this makes intensity 0 completely transparent and the rest opaque
+                // Alternatively, apply the transfer function to obtain a color
+                voxelColor = tFunc.getColor((int) val);
                 
                 
                 // BufferedImage expects a pixel color packed as ARGB in an int
@@ -317,6 +391,9 @@ public class RaycastRenderer extends Renderer implements TFChangeListener {
             case 1 :
                 mip(viewMatrix);
                 break;
+            case 2 :
+                compositing(viewMatrix);
+                break;
             default :
                 break;
         }
@@ -324,7 +401,7 @@ public class RaycastRenderer extends Renderer implements TFChangeListener {
         
         long endTime = System.currentTimeMillis();
         double runningTime = (endTime - startTime);
-        panel.setSpeedLabel(Double.toString(runningTime));
+        panel.setSpeedLabel(Double.toString(runningTime),(runningTime>30));
 
         Texture texture = AWTTextureIO.newTexture(gl.getGLProfile(), image, false);
 

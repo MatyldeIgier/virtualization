@@ -4,6 +4,7 @@
  */
 package gui;
 
+import java.awt.Color;
 import javax.swing.JOptionPane;
 import volvis.RaycastRenderer;
 
@@ -25,8 +26,10 @@ public class RaycastRendererPanel extends javax.swing.JPanel {
         this.renderer = renderer;
     }
 
-    public void setSpeedLabel(String text) {
+    public void setSpeedLabel(String text, boolean color) {
         renderingSpeedLabel.setText(text);
+        if(color) renderingSpeedLabel.setForeground(Color.red);
+        else renderingSpeedLabel.setForeground(Color.black);
     }
     
     
