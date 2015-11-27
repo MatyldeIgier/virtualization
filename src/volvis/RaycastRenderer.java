@@ -158,6 +158,7 @@ public class RaycastRenderer extends Renderer implements TFChangeListener {
 
     }
     
+    
     void mip(double[] viewMatrix) {
 
         // clear image
@@ -169,7 +170,7 @@ public class RaycastRenderer extends Renderer implements TFChangeListener {
 
         // vector uVec and vVec define a plane through the origin, 
         // perpendicular to the view vector viewVec
-        double[] viewVec = new double[3];
+        double[] viewVec = new double[3];//faire moyenne sur ça
         double[] uVec = new double[3];
         double[] vVec = new double[3];
         VectorMath.setVector(viewVec, viewMatrix[2], viewMatrix[6], viewMatrix[10]);
@@ -190,14 +191,18 @@ public class RaycastRenderer extends Renderer implements TFChangeListener {
         
         for (int j = 0; j < image.getHeight(); j++) {
             for (int i = 0; i < image.getWidth(); i++) {
-                pixelCoord[0] = uVec[0] * (i - imageCenter) + vVec[0] * (j - imageCenter)
-                        + volumeCenter[0];
-                pixelCoord[1] = uVec[1] * (i - imageCenter) + vVec[1] * (j - imageCenter)
-                        + volumeCenter[1];
-                pixelCoord[2] = uVec[2] * (i - imageCenter) + vVec[2] * (j - imageCenter)
-                        + volumeCenter[2];
+                int val = 0;
+                
+                for(int k = -50; k < 50; k++){
+                    pixelCoord[0] = uVec[0] * (i - imageCenter) + vVec[0] * (j - imageCenter)
+                            + volumeCenter[0] + viewVec[0]*2*k;
+                    pixelCoord[1] = uVec[1] * (i - imageCenter) + vVec[1] * (j - imageCenter)
+                            + volumeCenter[1] + viewVec[1]*2*k;
+                    pixelCoord[2] = uVec[2] * (i - imageCenter) + vVec[2] * (j - imageCenter)
+                            + volumeCenter[2] + viewVec[2]*2*k;
 
-                int val = getVoxel(pixelCoord);
+                    if(getVoxel(pixelCoord) > val) val=getVoxel(pixelCoord);
+                }
                 
                 // Map the intensity to a grey value by linear scaling
                 voxelColor.r = val/max;
@@ -205,7 +210,7 @@ public class RaycastRenderer extends Renderer implements TFChangeListener {
                 voxelColor.b = voxelColor.r;
                 voxelColor.a = val > 0 ? 1.0 : 0.0;  // this makes intensity 0 completely transparent and the rest opaque
                 // Alternatively, apply the transfer function to obtain a color
-                // voxelColor = tFunc.getColor(val);
+                //voxelColor = tFunc.getColor(val);
                 
                 
                 // BufferedImage expects a pixel color packed as ARGB in an int
@@ -217,6 +222,10 @@ public class RaycastRenderer extends Renderer implements TFChangeListener {
                 image.setRGB(i, j, pixelColor);
             }
         }
+        
+        //System.out.println("View vect : ("+ viewVec[0]+","+viewVec[1]+","+viewVec[2]+")");
+        //System.out.println("U vect : ("+ uVec[0]+","+uVec[1]+","+uVec[2]+")");
+        //System.out.println("V vect : ("+ vVec[0]+","+vVec[1]+","+vVec[2]+")");
 
     }
 
