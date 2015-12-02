@@ -80,7 +80,6 @@ public class RaycastRenderer extends Renderer implements TFChangeListener {
         return tfEditor;
     }
      
-
     short getVoxel(double[] coord) {
 
         if (coord[0] < 0 || coord[0] > volume.getDimX() || coord[1] < 0 || coord[1] > volume.getDimY()
@@ -94,7 +93,6 @@ public class RaycastRenderer extends Renderer implements TFChangeListener {
 
         return volume.getVoxel(x, y, z);
     }
-
 
     void slicer(double[] viewMatrix) {
 
@@ -157,10 +155,9 @@ public class RaycastRenderer extends Renderer implements TFChangeListener {
         }
 
     }
-    
-    
+       
     void mip(double[] viewMatrix) {
-
+        
         // clear image
         for (int j = 0; j < image.getHeight(); j++) {
             for (int i = 0; i < image.getWidth(); i++) {
@@ -189,19 +186,33 @@ public class RaycastRenderer extends Renderer implements TFChangeListener {
         TFColor voxelColor = new TFColor();
 
         
+        //Calcule automatiquement la range
+        int range = min4((int) (volume.getDimX() / viewVec[0]),
+                        (int) (volume.getDimY() / viewVec[1]),
+                        (int) (volume.getDimZ() / viewVec[2]),
+                        500);
+        
         for (int j = 0; j < image.getHeight(); j++) {
             for (int i = 0; i < image.getWidth(); i++) {
-                int val = 0;
-                
-                for(int k = -100; k < 100; k++){
                     pixelCoord[0] = uVec[0] * (i - imageCenter) + vVec[0] * (j - imageCenter)
-                            + volumeCenter[0] + viewVec[0]*k;
+                            + volumeCenter[0];
                     pixelCoord[1] = uVec[1] * (i - imageCenter) + vVec[1] * (j - imageCenter)
-                            + volumeCenter[1] + viewVec[1]*k;
+                            + volumeCenter[1];
                     pixelCoord[2] = uVec[2] * (i - imageCenter) + vVec[2] * (j - imageCenter)
-                            + volumeCenter[2] + viewVec[2]*k;
-
-                    int v = getVoxel(pixelCoord);
+                            + volumeCenter[2];
+                
+                //Le probleme etait qu'on recalculait la position du pixel a chaque fois, pas nécessaire.
+                int val = 0;
+                //Back to front
+                for(int k = -range; k < range; k=k+4){
+                    
+                    /*On pourra mettre +/- au lieu de k++ résoultion, 
+                    où resolution est un parametre modifiable dans l'interface*/
+                    
+                    short v = getVoxelTLI(pixelCoord[0]+k*viewVec[0],
+                                          pixelCoord[1]+k*viewVec[1],
+                                          pixelCoord[2]+k*viewVec[2]);
+                    
                     if(v > val) val=v;
                 }
                 
@@ -228,6 +239,48 @@ public class RaycastRenderer extends Renderer implements TFChangeListener {
         //System.out.println("U vect : ("+ uVec[0]+","+uVec[1]+","+uVec[2]+")");
         //System.out.println("V vect : ("+ vVec[0]+","+vVec[1]+","+vVec[2]+")");
 
+    }
+    
+    //calc the voxel using TLI
+    short getVoxelTLI(double x, double y, double z) {
+        //if the coordinate are out of bond, return 0
+        if ( (x < 0) || (x > volume.getDimX() - 1) || (y < 0) || (y > volume.getDimY() - 1)
+                || (z < 0) || (z > volume.getDimZ() - 1) ) {
+            return 0;
+        }
+        //else calc voxel with TLI
+        int x0 = (int) Math.floor(x), x1 = (int) Math.ceil(x);
+        int y0 = (int) Math.floor(y), y1 = (int) Math.ceil(y);
+        int z0 = (int) Math.floor(z), z1 = (int) Math.ceil(z);
+
+        double xd = (x - x0);
+        double yd = (y - y0);
+        double zd = (z - z0);
+
+        double c00 = volume.getVoxel(x0, y0, z0) * (1 - xd) + volume.getVoxel(x1, y0, z0) * xd;
+        double c01 = volume.getVoxel(x0, y0, z1) * (1 - xd) + volume.getVoxel(x1, y0, z1) * xd;
+        double c10 = volume.getVoxel(x0, y1, z0) * (1 - xd) + volume.getVoxel(x1, y1, z0) * xd;
+        double c11 = volume.getVoxel(x0, y1, z1) * (1 - xd) + volume.getVoxel(x1, y1, z1) * xd;
+
+        double c0 = c00 * (1 - yd) + c10 * yd;
+        double c1 = c01 * (1 - yd) + c11 * yd;
+
+        double c = c0 * (1 - zd) + c1 * zd;
+
+        return (short) c;
+    }
+    
+    int min4(int i, int j, int k, int defaultValue) {
+        int returnValue = 0;
+        if (Math.abs(i) <= Math.abs(j) && Math.abs(i) <= Math.abs(k)) {
+            returnValue = Math.abs(i) > 0 ? Math.abs(i) : defaultValue ;
+        } else if (Math.abs(j) <= Math.abs(k)) {
+            returnValue = Math.abs(j) > 0 ? Math.abs(j) : defaultValue ;
+        } else {
+            returnValue = Math.abs(k) > 0 ? Math.abs(k) : defaultValue ;
+        }
+        //System.out.println("min4 "+ returnValue);
+        return returnValue;
     }
     
     void compositing(double[] viewMatrix) {
@@ -303,7 +356,6 @@ public class RaycastRenderer extends Renderer implements TFChangeListener {
 
     }
 
-
     private void drawBoundingBox(GL2 gl) {
         gl.glPushAttrib(GL2.GL_CURRENT_BIT);
         gl.glDisable(GL2.GL_LIGHTING);
@@ -363,7 +415,6 @@ public class RaycastRenderer extends Renderer implements TFChangeListener {
 
     }
 
-    
     //Visualization variables
     public int visuChoice = 0; //0 = slicer
                                //1 = MIP
@@ -397,11 +448,9 @@ public class RaycastRenderer extends Renderer implements TFChangeListener {
             default :
                 break;
         }
-           
-        
         long endTime = System.currentTimeMillis();
         double runningTime = (endTime - startTime);
-        panel.setSpeedLabel(Double.toString(runningTime),(runningTime>30));
+        panel.setSpeedLabel(Double.toString(runningTime),(runningTime>50));
 
         Texture texture = AWTTextureIO.newTexture(gl.getGLProfile(), image, false);
 
