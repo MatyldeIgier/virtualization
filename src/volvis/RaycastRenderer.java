@@ -10,6 +10,7 @@ import gui.RaycastRendererPanel;
 import gui.TransferFunction2DEditor;
 import gui.TransferFunctionEditor;
 import java.awt.image.BufferedImage;
+import java.util.concurrent.TimeUnit;
 import javax.media.opengl.GL;
 import javax.media.opengl.GL2;
 import util.TFChangeListener;
@@ -79,7 +80,8 @@ public class RaycastRenderer extends Renderer implements TFChangeListener {
     public TransferFunctionEditor getTFPanel() {
         return tfEditor;
     }
-     
+    
+    //unused
     short getVoxel(double[] coord) {
 
         if (coord[0] < 0 || coord[0] > volume.getDimX() || coord[1] < 0 || coord[1] > volume.getDimY()
@@ -133,7 +135,7 @@ public class RaycastRenderer extends Renderer implements TFChangeListener {
                 pixelCoord[2] = uVec[2] * (i - imageCenter) + vVec[2] * (j - imageCenter)
                         + volumeCenter[2];
 
-                int val = getVoxel(pixelCoord);
+                int val = getVoxelTLI(pixelCoord[0],pixelCoord[1],pixelCoord[2]);
                 
                 // Map the intensity to a grey value by linear scaling
                 voxelColor.r = val/max;
@@ -155,7 +157,7 @@ public class RaycastRenderer extends Renderer implements TFChangeListener {
         }
 
     }
-       
+    
     void mip(double[] viewMatrix) {
         
         // clear image
@@ -203,6 +205,8 @@ public class RaycastRenderer extends Renderer implements TFChangeListener {
                 
                 //Le probleme etait qu'on recalculait la position du pixel a chaque fois, pas nécessaire.
                 int val = 0;
+                
+                
                 //Back to front
                 for(int k = -range; k < range; k=k+4){
                     
@@ -312,33 +316,46 @@ public class RaycastRenderer extends Renderer implements TFChangeListener {
         double max = volume.getMaximum();
         TFColor voxelColor = new TFColor();
 
+        //Calcule automatiquement la range
+        int range = min4((int) (volume.getDimX() / viewVec[0]),
+                        (int) (volume.getDimY() / viewVec[1]),
+                        (int) (volume.getDimZ() / viewVec[2]),
+                        500);
         
         for (int j = 0; j < image.getHeight(); j++) {
             for (int i = 0; i < image.getWidth(); i++) {
                 
-                double val = 0;
-                
-                for(int k = -50; k < 50; k++){
                     pixelCoord[0] = uVec[0] * (i - imageCenter) + vVec[0] * (j - imageCenter)
-                            + volumeCenter[0] + viewVec[0]*k;
+                            + volumeCenter[0];
                     pixelCoord[1] = uVec[1] * (i - imageCenter) + vVec[1] * (j - imageCenter)
-                            + volumeCenter[1] + viewVec[1]*k;
+                            + volumeCenter[1];
                     pixelCoord[2] = uVec[2] * (i - imageCenter) + vVec[2] * (j - imageCenter)
-                            + volumeCenter[2] + viewVec[2]*k;
+                            + volumeCenter[2];
 
-                    int v = getVoxel(pixelCoord);
+                    
+                double val = 0;
+                voxelColor.a = 1;
+                voxelColor.r = 0;
+                voxelColor.g = 0;
+                voxelColor.b = 0;
+                
+                //back to front
+                for(int k = -range; k < range; k++){
+                    short v = getVoxelTLI(pixelCoord[0]+k*viewVec[0],
+                                          pixelCoord[1]+k*viewVec[1],
+                                          pixelCoord[2]+k*viewVec[2]);
+                    //double[] voxel = {pixelCoord[0]+k*viewVec[0],
+                    //                      pixelCoord[1]+k*viewVec[1],
+                    //                      pixelCoord[2]+k*viewVec[2]};
+                    //short v = getVoxel(voxel);
+                    
                     double opacity = tFunc.getColor(v).a;
-                    val = v*opacity+(1-opacity)*val;
+                    //val = v*opacity+(1-opacity)*val;
+                    voxelColor.r = tFunc.getColor(v).r * opacity + (1-opacity)*voxelColor.r;
+                    voxelColor.g = tFunc.getColor(v).g * opacity + (1-opacity)*voxelColor.g;
+                    voxelColor.b = tFunc.getColor(v).b * opacity + (1-opacity)*voxelColor.b;
                 }
-                
-                // Map the intensity to a grey value by linear scaling
-                //voxelColor.r = val/max;
-                //voxelColor.g = voxelColor.r;
-                //voxelColor.b = voxelColor.r;
-                //voxelColor.a = val > 0 ? 1.0 : 0.0;  // this makes intensity 0 completely transparent and the rest opaque
-                // Alternatively, apply the transfer function to obtain a color
-                voxelColor = tFunc.getColor((int) val);
-                
+                //System.out.println(val);
                 
                 // BufferedImage expects a pixel color packed as ARGB in an int
                 int c_alpha = voxelColor.a <= 1.0 ? (int) Math.floor(voxelColor.a * 255) : 255;
@@ -416,11 +433,12 @@ public class RaycastRenderer extends Renderer implements TFChangeListener {
     }
 
     //Visualization variables
+    private int previousChoice = 0;
     public int visuChoice = 0; //0 = slicer
                                //1 = MIP
                                //2 = Compositing
                                //3 = 2D transfer function
-    public boolean shadingOn = false; // Volum shading
+    public boolean shadingOn = false; // Volume shading
     
     @Override
     public void visualize(GL2 gl) {
@@ -435,22 +453,33 @@ public class RaycastRenderer extends Renderer implements TFChangeListener {
         gl.glGetDoublev(GL2.GL_MODELVIEW_MATRIX, viewMatrix, 0);
 
         long startTime = System.currentTimeMillis();
-        switch(visuChoice){
-            case 0 :
-                slicer(viewMatrix);
-                break;
-            case 1 :
-                mip(viewMatrix);
-                break;
-            case 2 :
-                compositing(viewMatrix);
-                break;
-            default :
-                break;
-        }
+        //----------------------------------------------------------------
+        //IF the the user move the mouse, we use slicer to render more quickly.
+        if(refreshView())
+            switch(visuChoice){
+                case 0 :
+                    slicer(viewMatrix);
+                    break;
+                case 1 :
+                    mip(viewMatrix);
+                    break;
+                case 2 :
+                    compositing(viewMatrix);
+                    break;
+                default :
+                    break;
+            }
+        else
+            slicer(viewMatrix);
+        previousViewMatrix[0] = viewMatrix[0];
+        previousViewMatrix[1] = viewMatrix[1];
+        previousViewMatrix[2] = viewMatrix[2];
+        previousChoice = visuChoice;
+        //----------------------------------------------------------------
+        
         long endTime = System.currentTimeMillis();
         double runningTime = (endTime - startTime);
-        panel.setSpeedLabel(Double.toString(runningTime),(runningTime>50));
+        panel.setSpeedLabel(Double.toString(runningTime),(runningTime >= refreshTimeLimit));
 
         Texture texture = AWTTextureIO.newTexture(gl.getGLProfile(), image, false);
 
@@ -490,11 +519,21 @@ public class RaycastRenderer extends Renderer implements TFChangeListener {
     }
     private BufferedImage image;
     private double[] viewMatrix = new double[4 * 4];
+    private double[] previousViewMatrix = new double[4 * 4];
+    
+    private int refreshTimeLimit = 50; //in ms
 
     @Override
     public void changed() {
         for (int i=0; i < listeners.size(); i++) {
             listeners.get(i).changed();
         }
+    }
+
+    private boolean refreshView() {
+        return (previousViewMatrix[0]==viewMatrix[0] && 
+                previousViewMatrix[1]==viewMatrix[1] && 
+                previousViewMatrix[2]==viewMatrix[2]) ||
+                previousChoice != visuChoice;
     }
 }
