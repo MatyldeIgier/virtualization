@@ -158,7 +158,7 @@ public class RaycastRenderer extends Renderer implements TFChangeListener {
 
     }
     
-    void mip(double[] viewMatrix) {
+    void mip(double[] viewMatrix, int resolution) {
         
         // clear image
         for (int j = 0; j < image.getHeight(); j++) {
@@ -208,10 +208,7 @@ public class RaycastRenderer extends Renderer implements TFChangeListener {
                 
                 
                 //Back to front
-                for(int k = -range; k < range; k=k+4){
-                    
-                    /*On pourra mettre +/- au lieu de k++ résoultion, 
-                    où resolution est un parametre modifiable dans l'interface*/
+                for(int k = -range; k <= range; k=k+resolution){
                     
                     short v = getVoxelTLI(pixelCoord[0]+k*viewVec[0],
                                           pixelCoord[1]+k*viewVec[1],
@@ -287,7 +284,7 @@ public class RaycastRenderer extends Renderer implements TFChangeListener {
         return returnValue;
     }
     
-    void compositing(double[] viewMatrix) {
+    void compositing(double[] viewMatrix, int resolution) {
 
         // clear image
         for (int j = 0; j < image.getHeight(); j++) {
@@ -335,27 +332,27 @@ public class RaycastRenderer extends Renderer implements TFChangeListener {
                     
                 double val = 0;
                 voxelColor.a = 1;
-                voxelColor.r = 0;
-                voxelColor.g = 0;
-                voxelColor.b = 0;
+                voxelColor.r = -1;
+                voxelColor.g = -1;
+                voxelColor.b = -1;
                 
                 //back to front
-                for(int k = -range; k < range; k++){
+                for(int k = -range; k <= range; k=k+resolution){
                     short v = getVoxelTLI(pixelCoord[0]+k*viewVec[0],
                                           pixelCoord[1]+k*viewVec[1],
                                           pixelCoord[2]+k*viewVec[2]);
-                    //double[] voxel = {pixelCoord[0]+k*viewVec[0],
-                    //                      pixelCoord[1]+k*viewVec[1],
-                    //                      pixelCoord[2]+k*viewVec[2]};
-                    //short v = getVoxel(voxel);
                     
                     double opacity = tFunc.getColor(v).a;
                     //val = v*opacity+(1-opacity)*val;
-                    voxelColor.r = tFunc.getColor(v).r * opacity + (1-opacity)*voxelColor.r;
-                    voxelColor.g = tFunc.getColor(v).g * opacity + (1-opacity)*voxelColor.g;
-                    voxelColor.b = tFunc.getColor(v).b * opacity + (1-opacity)*voxelColor.b;
+                    
+                    voxelColor.r = voxelColor.r == -1 ? tFunc.getColor(v).r : tFunc.getColor(v).r * opacity + (1-opacity)*voxelColor.r;
+                    voxelColor.g = voxelColor.g == -1 ? tFunc.getColor(v).g : tFunc.getColor(v).g * opacity + (1-opacity)*voxelColor.g;
+                    voxelColor.b = voxelColor.b == -1 ? tFunc.getColor(v).b : tFunc.getColor(v).b * opacity + (1-opacity)*voxelColor.b;
+                    
                 }
                 //System.out.println(val);
+                //System.out.println("Final voxel : ("+voxelColor.r+","+voxelColor.g+","+voxelColor.b+","+voxelColor.a+")");
+                
                 
                 // BufferedImage expects a pixel color packed as ARGB in an int
                 int c_alpha = voxelColor.a <= 1.0 ? (int) Math.floor(voxelColor.a * 255) : 255;
@@ -366,11 +363,6 @@ public class RaycastRenderer extends Renderer implements TFChangeListener {
                 image.setRGB(i, j, pixelColor);
             }
         }
-        
-        //System.out.println("View vect : ("+ viewVec[0]+","+viewVec[1]+","+viewVec[2]+")");
-        //System.out.println("U vect : ("+ uVec[0]+","+uVec[1]+","+uVec[2]+")");
-        //System.out.println("V vect : ("+ vVec[0]+","+vVec[1]+","+vVec[2]+")");
-
     }
 
     private void drawBoundingBox(GL2 gl) {
@@ -454,23 +446,31 @@ public class RaycastRenderer extends Renderer implements TFChangeListener {
 
         long startTime = System.currentTimeMillis();
         //----------------------------------------------------------------
-        //IF the the user move the mouse, we use slicer to render more quickly.
+        //refreshview is called when the user stops moving the mouse and/or click the image
         if(refreshView())
             switch(visuChoice){
-                case 0 :
-                    slicer(viewMatrix);
-                    break;
                 case 1 :
-                    mip(viewMatrix);
+                    mip(viewMatrix,1);
                     break;
                 case 2 :
-                    compositing(viewMatrix);
+                    compositing(viewMatrix,1);
                     break;
                 default :
+                    slicer(viewMatrix);
                     break;
             }
         else
-            slicer(viewMatrix);
+            switch(visuChoice){
+                case 1 :
+                    mip(viewMatrix,15);
+                    break;
+                case 2 :
+                    compositing(viewMatrix,15);
+                    break;
+                default :
+                    slicer(viewMatrix);
+                    break;
+            }
         previousViewMatrix[0] = viewMatrix[0];
         previousViewMatrix[1] = viewMatrix[1];
         previousViewMatrix[2] = viewMatrix[2];
@@ -521,7 +521,7 @@ public class RaycastRenderer extends Renderer implements TFChangeListener {
     private double[] viewMatrix = new double[4 * 4];
     private double[] previousViewMatrix = new double[4 * 4];
     
-    private int refreshTimeLimit = 50; //in ms
+    private int refreshTimeLimit = 200; //in ms
 
     @Override
     public void changed() {
