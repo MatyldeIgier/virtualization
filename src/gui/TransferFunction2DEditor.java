@@ -68,7 +68,7 @@ public class TransferFunction2DEditor extends javax.swing.JPanel {
         maxGradientMagnitude = gradvol.getMaxGradientMagnitude();
 
         System.out.println("maxIntensity = " + maxIntensity);
-        System.out.println("max gradient = " + maxGradientMagnitude);
+        System.out.println("maxGradient = " + maxGradientMagnitude);
 
         xbins = maxIntensity + 1;
         ybins = 300;

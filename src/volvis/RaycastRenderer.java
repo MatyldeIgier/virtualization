@@ -250,23 +250,27 @@ public class RaycastRenderer extends Renderer implements TFChangeListener {
             return 0;
         }
         //else calc voxel with TLI
-        int x0 = (int) Math.floor(x), x1 = (int) Math.ceil(x);
-        int y0 = (int) Math.floor(y), y1 = (int) Math.ceil(y);
-        int z0 = (int) Math.floor(z), z1 = (int) Math.ceil(z);
+        int x0 = (int) Math.floor(x);
+        int y0 = (int) Math.floor(y);
+        int z0 = (int) Math.floor(z);
+        
+        int x1 = (int) Math.ceil(x);
+        int y1 = (int) Math.ceil(y);
+        int z1 = (int) Math.ceil(z);
 
-        double xd = (x - x0);
-        double yd = (y - y0);
-        double zd = (z - z0);
+        double xd =(x - x0);
+        double yd =(y - y0);
+        double zd =(z - z0);
 
-        double c00 = volume.getVoxel(x0, y0, z0) * (1 - xd) + volume.getVoxel(x1, y0, z0) * xd;
-        double c01 = volume.getVoxel(x0, y0, z1) * (1 - xd) + volume.getVoxel(x1, y0, z1) * xd;
-        double c10 = volume.getVoxel(x0, y1, z0) * (1 - xd) + volume.getVoxel(x1, y1, z0) * xd;
-        double c11 = volume.getVoxel(x0, y1, z1) * (1 - xd) + volume.getVoxel(x1, y1, z1) * xd;
+        double c00 = volume.getVoxel(x0, y0, z0)*(1 - xd) + volume.getVoxel(x1, y0, z0)*xd;
+        double c01 = volume.getVoxel(x0, y0, z1)*(1 - xd) + volume.getVoxel(x1, y0, z1)*xd;
+        double c10 = volume.getVoxel(x0, y1, z0)*(1 - xd) + volume.getVoxel(x1, y1, z0)*xd;
+        double c11 = volume.getVoxel(x0, y1, z1)*(1 - xd) + volume.getVoxel(x1, y1, z1)*xd;
 
-        double c0 = c00 * (1 - yd) + c10 * yd;
-        double c1 = c01 * (1 - yd) + c11 * yd;
-
-        double c = c0 * (1 - zd) + c1 * zd;
+        double c0 = c00*(1 - yd) + c10*yd;
+        double c1 = c01*(1 - yd) + c11*yd;
+        
+        double c = c0*(1 - zd) + c1*zd;
 
         return (short) c;
     }
