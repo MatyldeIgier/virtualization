@@ -68,9 +68,9 @@ public class GradientVolume {
                         dz=0;
                     else
                     {
-                        dz = volume.getVoxel(x,y,z-1)-volume.getVoxel(x,y,z+1);
-                        dy = volume.getVoxel(x,y-1,z)-volume.getVoxel(x,y+1,z);
-                        dx = volume.getVoxel(x-1,y,z)-volume.getVoxel(x+1,y,z);
+                        dz = volume.getVoxel(x,y,z+1)-volume.getVoxel(x,y,z-1);
+                        dy = volume.getVoxel(x,y+1,z)-volume.getVoxel(x,y-1,z);
+                        dx = volume.getVoxel(x+1,y,z)-volume.getVoxel(x-1,y,z);
                     }
                     
                 }

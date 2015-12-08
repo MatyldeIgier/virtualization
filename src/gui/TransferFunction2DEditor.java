@@ -72,7 +72,6 @@ public class TransferFunction2DEditor extends javax.swing.JPanel {
 
         xbins = maxIntensity + 1;
         ybins = 300;
-
         histogram = new double[xbins * ybins];
         int volumeSize = vol.getDimX() * vol.getDimY() * vol.getDimZ();
         for (int i = 0; i < volumeSize; i++) {
@@ -297,6 +296,8 @@ public class TransferFunction2DEditor extends javax.swing.JPanel {
             this.radius = r;
             this.color = new TFColor(0.0, 204.0/255.0, 153.0/255.0, 0.3);
         }
+        
+        //TODO HERE
     }
 
     // Variables declaration - do not modify//GEN-BEGIN:variables
