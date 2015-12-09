@@ -234,7 +234,7 @@ public class RaycastRenderer extends Renderer implements TFChangeListener {
                 int pixelColor = (c_alpha << 24) | (c_red << 16) | (c_green << 8) | c_blue;
                 image.setRGB(i, j, pixelColor);
             }
-        }
+        } 
         
         //System.out.println("View vect : ("+ viewVec[0]+","+viewVec[1]+","+viewVec[2]+")");
         //System.out.println("U vect : ("+ uVec[0]+","+uVec[1]+","+uVec[2]+")");
@@ -396,10 +396,20 @@ public class RaycastRenderer extends Renderer implements TFChangeListener {
 
         // sample on a plane through the origin of the volume data
         double max = volume.getMaximum();
-        TFColor voxelColor = tfEditor2D.triangleWidget.color;
+        TFColor voxelColor = new TFColor(0,0,0,0);
         
+        //Levoy's
         int fv = tfEditor2D.triangleWidget.baseIntensity;
         double r = tfEditor2D.triangleWidget.radius;
+        TFColor triangleColor = tfEditor2D.triangleWidget.color;
+        double opacity = triangleColor.a;
+        
+        //Phong:
+        double ka = 0.1; //ambient
+        double kd = 0.7; //diffuse
+        double ks = 0.2; //specular
+        TFColor lightColor = new TFColor(1,1,1,1); //lightcolor
+        int alpha = 10;
                 
         //Calcule automatiquement la range
         int range = min4((int) (volume.getDimX() / viewVec[0]),
@@ -416,9 +426,11 @@ public class RaycastRenderer extends Renderer implements TFChangeListener {
                     pixelCoord[2] = uVec[2] * (i - imageCenter) + vVec[2] * (j - imageCenter)
                             + volumeCenter[2];
                 
-                    
-                voxelColor = tfEditor2D.triangleWidget.color;
-                voxelColor.a = -1;
+                voxelColor.a = 1;
+                voxelColor.r = -1;
+                voxelColor.g = -1;
+                voxelColor.b = -1;
+                
                 //back to front
                 for(int k = -range; k <= range; k=k+resolution){
                     
@@ -438,23 +450,34 @@ public class RaycastRenderer extends Renderer implements TFChangeListener {
 
                     if(gfx1==0 && fx1 == fv)
                     {
-                        voxelColor.a = 1;
+                        opacity = triangleColor.a;
                     }
-                    else if(fx1 - r * gfx1 <= fv && fv <= fx1 + r * gfx1)
+                    else if(fx1 - r * gfx1 <= fv && fv <= fx1 + r * gfx1
+                             && gfx1 <= tfEditor2D.triangleWidget.hmaxN*tfEditor2D.maxGradientMagnitude &&
+                            gfx1 >= tfEditor2D.triangleWidget.hminN*tfEditor2D.maxGradientMagnitude 
+                            )
                     {
-                        //voxelColor.a = voxelColor.a == -1 ? 1 :voxelColor.a * (1 - 1/r * Math.abs( fv - fx1 ) / gfx1);
-                        voxelColor.a = 1;
+                        opacity = triangleColor.a * (1 - 1/r * Math.abs( fv - fx1 ) / gfx1);
                     }
                     else
                     {
-                        voxelColor.a = voxelColor.a == -1 ? 0 : voxelColor.a;
+                        opacity = 0;
                     }
-                    
+                    if(voxelColor.r == -1) voxelColor.r = triangleColor.r * opacity;
+                    else voxelColor.r = triangleColor.r * opacity + (1-opacity)*voxelColor.r;
+                    if(voxelColor.g == -1) voxelColor.g = triangleColor.g * opacity;
+                    else voxelColor.g = triangleColor.g * opacity + (1-opacity)*voxelColor.g;
+                    if(voxelColor.b == -1) voxelColor.b = triangleColor.b * opacity;
+                    else voxelColor.b = triangleColor.b * opacity + (1-opacity)*voxelColor.b;  
                     
                 }
-                //if(voxelColor.a > 0) System.out.print("x") ;
-                //System.out.println("("+voxelColor.r+","+voxelColor.g+","+voxelColor.b+","+voxelColor.a+")");
                 
+                if(shadingOn){
+                    //TODO
+                }
+                if(voxelColor.r == 0 && voxelColor.g == 0  && voxelColor.b == 0)
+                    voxelColor.a = 0;
+           
                 // BufferedImage expects a pixel color packed as ARGB in an int
                 int c_alpha = voxelColor.a <= 1.0 ? (int) Math.floor(voxelColor.a * 255) : 255;
                 int c_red = voxelColor.r <= 1.0 ? (int) Math.floor(voxelColor.r * 255) : 255;
@@ -464,8 +487,6 @@ public class RaycastRenderer extends Renderer implements TFChangeListener {
                 image.setRGB(i, j, pixelColor);
             }
         }
-        System.out.println("fv: " + fv);
-        System.out.println("r: " + r);
     }
 
     private void drawBoundingBox(GL2 gl) {

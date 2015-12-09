@@ -28,7 +28,7 @@ public class TransferFunction2DEditor extends javax.swing.JPanel {
     public int xbins, ybins;
     public double[] histogram;
     private short maxIntensity;
-    private double maxGradientMagnitude;
+    public double maxGradientMagnitude;
     private ArrayList<TFChangeListener> listeners = new ArrayList<TFChangeListener>();
 
     
@@ -47,7 +47,7 @@ public class TransferFunction2DEditor extends javax.swing.JPanel {
         labelMinVal.setText("0");
         labelMaxVal.setText(Integer.toString(maxIntensity));
 
-        triangleWidget = new TriangleWidget((short) (maxIntensity / 2), 1.0);
+        triangleWidget = new TriangleWidget((short) (maxIntensity / 2), 0.3);
         setSelectedInfo();
     }
 
@@ -289,15 +289,26 @@ public class TransferFunction2DEditor extends javax.swing.JPanel {
         public short baseIntensity;
         public double radius;
         public TFColor color;
+        public int hmin;
+        public int hmax;
+        public double hminN;
+        public double hmaxN;
         
 
         public TriangleWidget(short base, double r) {
             this.baseIntensity = base;
             this.radius = r;
             this.color = new TFColor(0.0, 204.0/255.0, 153.0/255.0, 0.3);
+            this.hmin = 3;
+            this.hmax = 287;
+            this.hminN = 0;
+            this.hmaxN = 1;
         }
         
-        //TODO HERE
+        public double getR(){return this.color.r;}
+        public double getG(){return this.color.g;}
+        public double getB(){return this.color.b;}
+        public double getA(){return this.color.a;}
     }
 
     // Variables declaration - do not modify//GEN-BEGIN:variables
