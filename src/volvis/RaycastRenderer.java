@@ -396,9 +396,11 @@ public class RaycastRenderer extends Renderer implements TFChangeListener {
 
         // sample on a plane through the origin of the volume data
         double max = volume.getMaximum();
-        TFColor voxelColor = new TFColor();
-
+        TFColor voxelColor = tfEditor2D.triangleWidget.color;
         
+        int fv = tfEditor2D.triangleWidget.baseIntensity;
+        double r = tfEditor2D.triangleWidget.radius;
+                
         //Calcule automatiquement la range
         int range = min4((int) (volume.getDimX() / viewVec[0]),
                         (int) (volume.getDimY() / viewVec[1]),
@@ -414,8 +416,9 @@ public class RaycastRenderer extends Renderer implements TFChangeListener {
                     pixelCoord[2] = uVec[2] * (i - imageCenter) + vVec[2] * (j - imageCenter)
                             + volumeCenter[2];
                 
-                int val = 0;
-                
+                    
+                voxelColor = tfEditor2D.triangleWidget.color;
+                voxelColor.a = -1;
                 //back to front
                 for(int k = -range; k <= range; k=k+resolution){
                     
@@ -423,36 +426,34 @@ public class RaycastRenderer extends Renderer implements TFChangeListener {
                     double y = pixelCoord[1]+k*viewVec[1];
                     double z = pixelCoord[2]+k*viewVec[2];
                            
-                    
                     short fx1 = getVoxelTLI(x,y,z);
-                    
                     //Levoy's Method to compute opacity
-                    double opacity = 0;
-                    
-                    short fv = 0;
-                    
                     float gfx1 = 0;
+                    
                     if ((x >= 0) && (x < volume.getDimX()) && (y >= 0) && (y < volume.getDimY())
                         && (z >= 0) && (z < volume.getDimZ())) 
                     {
-                        gfx1 = gradients.getGradient((int)(x),(int)(y),(int)(z)).mag;
-                        fv = getVoxel(new double[]{x,y,z});
+                        gfx1 = gradients.getGradient((int)(Math.floor(x)),(int)(Math.floor(y)),(int)(Math.floor(z))).mag;//?
                     }
 
-                    if(gfx1==0 &&
-                            fx1 == fv)
-                    opacity = tFunc.getColor(fx1).a;
-                    else if(gfx1 > 0 && 
-                            fx1 - r * gfx1 <= fv &&
-                            fv <= fx1 + r * gfx1)
-                    opacity = tFunc.getColor(fx1).a*(1 - 1/r * Math.abs((fv-fx1)/gfx1));
-                    else opacity = 0;
+                    if(gfx1==0 && fx1 == fv)
+                    {
+                        voxelColor.a = 1;
+                    }
+                    else if(fx1 - r * gfx1 <= fv && fv <= fx1 + r * gfx1)
+                    {
+                        //voxelColor.a = voxelColor.a == -1 ? 1 :voxelColor.a * (1 - 1/r * Math.abs( fv - fx1 ) / gfx1);
+                        voxelColor.a = 1;
+                    }
+                    else
+                    {
+                        voxelColor.a = voxelColor.a == -1 ? 0 : voxelColor.a;
+                    }
                     
-                    voxelColor.r = voxelColor.r == -1 ? tFunc.getColor(fx1).r : tFunc.getColor(fx1).r * opacity + (1-opacity)*voxelColor.r;
-                    voxelColor.g = voxelColor.g == -1 ? tFunc.getColor(fx1).g : tFunc.getColor(fx1).g * opacity + (1-opacity)*voxelColor.g;
-                    voxelColor.b = voxelColor.b == -1 ? tFunc.getColor(fx1).b : tFunc.getColor(fx1).b * opacity + (1-opacity)*voxelColor.b;
                     
                 }
+                //if(voxelColor.a > 0) System.out.print("x") ;
+                //System.out.println("("+voxelColor.r+","+voxelColor.g+","+voxelColor.b+","+voxelColor.a+")");
                 
                 // BufferedImage expects a pixel color packed as ARGB in an int
                 int c_alpha = voxelColor.a <= 1.0 ? (int) Math.floor(voxelColor.a * 255) : 255;
@@ -463,6 +464,8 @@ public class RaycastRenderer extends Renderer implements TFChangeListener {
                 image.setRGB(i, j, pixelColor);
             }
         }
+        System.out.println("fv: " + fv);
+        System.out.println("r: " + r);
     }
 
     private void drawBoundingBox(GL2 gl) {
@@ -626,7 +629,6 @@ public class RaycastRenderer extends Renderer implements TFChangeListener {
     private BufferedImage image;
     private double[] viewMatrix = new double[4 * 4];
     private double[] previousViewMatrix = new double[4 * 4];
-    private double r = 2;
     
     private int refreshTimeLimit = 200; //in ms
 

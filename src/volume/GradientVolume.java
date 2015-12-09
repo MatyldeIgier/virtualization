@@ -52,7 +52,7 @@ public class GradientVolume {
     private void compute() {
         System.out.println("Computing...");
         for (int i=0; i<data.length; i++) {
-            int dx = 0, dy= 0, dz= 0;
+            float dx = 0, dy= 0, dz= 0;
             int x = i%dimX;
             int y = (i%(dimX*dimY)-i%dimX)/dimX;
             int z = (i-i%dimX-(i%(dimX*dimY)-i%dimX))/(dimX*dimY);
@@ -68,9 +68,9 @@ public class GradientVolume {
                         dz=0;
                     else
                     {
-                        dz = volume.getVoxel(x,y,z+1)-volume.getVoxel(x,y,z-1);
-                        dy = volume.getVoxel(x,y+1,z)-volume.getVoxel(x,y-1,z);
-                        dx = volume.getVoxel(x+1,y,z)-volume.getVoxel(x-1,y,z);
+                        dz = (volume.getVoxel(x,y,z+1)-volume.getVoxel(x,y,z-1))/2;
+                        dy = (volume.getVoxel(x,y+1,z)-volume.getVoxel(x,y-1,z))/2;
+                        dx = (volume.getVoxel(x+1,y,z)-volume.getVoxel(x-1,y,z))/2;
                     }
                     
                 }
