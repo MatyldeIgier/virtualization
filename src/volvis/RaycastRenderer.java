@@ -523,11 +523,11 @@ public class RaycastRenderer extends Renderer implements TFChangeListener {
                 int c_green = 0;
                 int c_blue = 1;
                 if(shadingOn && !forceShadingOFF){
-                    if(shadedColor.r>0) System.out.println("s"+shadedColor);
+                    //if(shadedColor.r>0) System.out.println("s"+shadedColor);
                     c_red = shadedColor.r < 0 ? 0 : shadedColor.r <= 1.0 ? (int) Math.floor(shadedColor.r * 255) : 255;
-                    c_green = shadedColor.r < 0 ? 0 : shadedColor.g <= 1.0 ? (int) Math.floor(shadedColor.g * 255) : 255;
-                    c_blue = shadedColor.r < 0 ? 0 : shadedColor.b <= 1.0 ? (int) Math.floor(shadedColor.b * 255) : 255;
-                    System.out.println("rgb: "+c_red+","+c_green+","+c_blue);
+                    c_green = shadedColor.g < 0 ? 0 : shadedColor.g <= 1.0 ? (int) Math.floor(shadedColor.g * 255) : 255;
+                    c_blue = shadedColor.b < 0 ? 0 : shadedColor.b <= 1.0 ? (int) Math.floor(shadedColor.b * 255) : 255;
+                    //if(shadedColor.r>0) System.out.println("rgb: "+c_red+","+c_green+","+c_blue);
                 } else {
                     //System.out.println("v"+voxelColor);
                     c_red = voxelColor.r <= 1.0 ? (int) Math.floor(voxelColor.r * 255) : 255;
