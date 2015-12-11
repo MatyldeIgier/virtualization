@@ -411,7 +411,7 @@ public class RaycastRenderer extends Renderer implements TFChangeListener {
         double kd = 0.7; //diffuse
         double ks = 0.2; //specular
         TFColor lightColor = new TFColor(1,1,1,1); //lightcolor
-        double alpha = 2.0;
+        double alpha = 10.0;
         double[] lightVec= new double[3];
         double[] normalVec = new double[3];       
         VectorMath.setVector(lightVec, viewMatrix[2]+0.1, viewMatrix[6]+0.2, viewMatrix[10]);
@@ -439,7 +439,9 @@ public class RaycastRenderer extends Renderer implements TFChangeListener {
                 voxelColor.r = -1;
                 voxelColor.g = -1;
                 voxelColor.b = -1;
-                
+                shadedColor.r = 0;
+                shadedColor.g = 0;
+                shadedColor.b = 0;
                 //back to front
                 for(int k = -range; k <= range; k=k+resolution){
                     
@@ -480,27 +482,34 @@ public class RaycastRenderer extends Renderer implements TFChangeListener {
                     else voxelColor.b = triangleColor.b * opacity + (1-opacity)*voxelColor.b;
                     
                     if(shadingOn && !forceShadingOFF){
-                        if ((x >= 0) && (x < volume.getDimX()) && (y >= 0) && (y < volume.getDimY())
-                        && (z >= 0) && (z < volume.getDimZ()) 
+                        if ((x > 0) && (x < volume.getDimX()) && (y > 0) && (y < volume.getDimY())
+                        && (z > 0) && (z < volume.getDimZ()) 
                                 && opacity != 0) 
                         {
-                        VectorMath.setVector(normalVec, 
-                                gradients.getGradient((int)(Math.floor(x)),(int)(Math.floor(y)),(int)(Math.floor(z))).x,
-                                gradients.getGradient((int)(Math.floor(x)),(int)(Math.floor(y)),(int)(Math.floor(z))).y,
-                                gradients.getGradient((int)(Math.floor(x)),(int)(Math.floor(y)),(int)(Math.floor(z))).z);
-                        VectorMath.setVector(normalVec,normalVec[0]/VectorMath.length(normalVec),
-                                normalVec[1]/VectorMath.length(normalVec),
-                                normalVec[2]/VectorMath.length(normalVec));//normalize
-                        
-                        double LN = VectorMath.dotproduct(lightVec, normalVec);
-                        double NH = VectorMath.dotproduct(H, normalVec);
-                        
-                        shadedColor.r = ka*voxelColor.r+(kd*LN*voxelColor.r+lightColor.r*ks*Math.pow(NH,alpha));
-                        shadedColor.g = ka*voxelColor.g+(kd*LN*voxelColor.g+lightColor.g*ks*Math.pow(NH,alpha));
-                        shadedColor.b = ka*voxelColor.b+(kd*LN*voxelColor.b+lightColor.b*ks*Math.pow(NH,alpha));
-//System.out.println("NH: "+NH+" LN: "+LN+" "+VectorMath.length(normalVec)+" "+lightColor.r*ks*Math.pow(NH,alpha)+" (r,g,b): ("+shadedColor.r+","+shadedColor.g+","+shadedColor.b+")");
+                            VectorMath.setVector(normalVec, 
+                                    gradients.getGradient((int)(Math.floor(x)),(int)(Math.floor(y)),(int)(Math.floor(z))).x,
+                                    gradients.getGradient((int)(Math.floor(x)),(int)(Math.floor(y)),(int)(Math.floor(z))).y,
+                                    gradients.getGradient((int)(Math.floor(x)),(int)(Math.floor(y)),(int)(Math.floor(z))).z);
+                            
+                            if(normalVec[0]!=normalVec[0]) {
+                                //???????????????
+                                shadedColor.r = 1;
+                                shadedColor.g = 0;
+                                shadedColor.b = 0;
+                                
+                            } else {
+                                VectorMath.setVector(normalVec,normalVec[0]/VectorMath.length(normalVec),
+                                    normalVec[1]/VectorMath.length(normalVec),
+                                    normalVec[2]/VectorMath.length(normalVec));//normalize
 
-                        
+                                double LN = VectorMath.dotproduct(lightVec, normalVec);
+                                double NH = VectorMath.dotproduct(H, normalVec);
+                                
+                                shadedColor.r = ka*voxelColor.r+(kd*LN*voxelColor.r+lightColor.r*ks*Math.pow(NH,alpha));
+                                shadedColor.g = ka*voxelColor.g+(kd*LN*voxelColor.g+lightColor.g*ks*Math.pow(NH,alpha));
+                                shadedColor.b = ka*voxelColor.b+(kd*LN*voxelColor.b+lightColor.b*ks*Math.pow(NH,alpha));
+                            }
+//System.out.println(" vox: "+voxelColor+" shad: "+shadedColor);
                         }
                     }
                     
@@ -510,19 +519,21 @@ public class RaycastRenderer extends Renderer implements TFChangeListener {
            
                 // BufferedImage expects a pixel color packed as ARGB in an int
                 int c_alpha = voxelColor.a <= 1.0 ? (int) Math.floor(voxelColor.a * 255) : 255;
+                int c_red = 0;
+                int c_green = 0;
+                int c_blue = 1;
                 if(shadingOn && !forceShadingOFF){
-                    //System.out.println(shadedColor);
-                    int c_red = shadedColor.r <= 1.0 ? (int) Math.floor(voxelColor.r * 255) : 255;
-                    int c_green = shadedColor.g <= 1.0 ? (int) Math.floor(voxelColor.g * 255) : 255;
-                    int c_blue = shadedColor.b <= 1.0 ? (int) Math.floor(voxelColor.b * 255) : 255;
+                    if(shadedColor.r>0) System.out.println("s"+shadedColor);
+                    c_red = shadedColor.r < 0 ? 0 : shadedColor.r <= 1.0 ? (int) Math.floor(shadedColor.r * 255) : 255;
+                    c_green = shadedColor.r < 0 ? 0 : shadedColor.g <= 1.0 ? (int) Math.floor(shadedColor.g * 255) : 255;
+                    c_blue = shadedColor.r < 0 ? 0 : shadedColor.b <= 1.0 ? (int) Math.floor(shadedColor.b * 255) : 255;
+                    System.out.println("rgb: "+c_red+","+c_green+","+c_blue);
                 } else {
-                    int c_red = voxelColor.r <= 1.0 ? (int) Math.floor(voxelColor.r * 255) : 255;
-                    int c_green = voxelColor.g <= 1.0 ? (int) Math.floor(voxelColor.g * 255) : 255;
-                    int c_blue = voxelColor.b <= 1.0 ? (int) Math.floor(voxelColor.b * 255) : 255;
+                    //System.out.println("v"+voxelColor);
+                    c_red = voxelColor.r <= 1.0 ? (int) Math.floor(voxelColor.r * 255) : 255;
+                    c_green = voxelColor.g <= 1.0 ? (int) Math.floor(voxelColor.g * 255) : 255;
+                    c_blue = voxelColor.b <= 1.0 ? (int) Math.floor(voxelColor.b * 255) : 255;
                 }
-                int c_red = voxelColor.r <= 1.0 ? (int) Math.floor(voxelColor.r * 255) : 255;
-                int c_green = voxelColor.g <= 1.0 ? (int) Math.floor(voxelColor.g * 255) : 255;
-                int c_blue = voxelColor.b <= 1.0 ? (int) Math.floor(voxelColor.b * 255) : 255;
                 int pixelColor = (c_alpha << 24) | (c_red << 16) | (c_green << 8) | c_blue;
                 image.setRGB(i, j, pixelColor);
             }

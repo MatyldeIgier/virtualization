@@ -63,4 +63,8 @@ public class VectorMath {
         v[1] = v[1]/d;
         v[2] = v[2]/d;
     }
+    
+    public static String toString(double[] v){
+        return "("+v[0]+","+v[1]+","+v[2]+") ";
+    }
 }
