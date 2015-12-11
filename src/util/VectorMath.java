@@ -45,6 +45,22 @@ public class VectorMath {
     public static double length(double[] v) {
         return Math.sqrt(v[0]*v[0] + v[1]*v[1] + v[2]*v[2]);
     }
-    
 
+    public static void normalize(double[] v) {
+        divide(v,length(v));
+    }
+    
+    public static double[] add(double[] v, double[] u) {
+        double[] result = new double[3];
+        result[0] = v[0]+u[0];
+        result[1] = v[1]+u[1];
+        result[2] = v[2]+u[2];
+        return result;
+    }
+    
+    public static void divide(double[] v, double d){
+        v[0] = v[0]/d;
+        v[1] = v[1]/d;
+        v[2] = v[2]/d;
+    }
 }
