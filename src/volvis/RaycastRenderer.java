@@ -492,7 +492,7 @@ public class RaycastRenderer extends Renderer implements TFChangeListener {
                                     gradients.getGradient((int)(Math.floor(x)),(int)(Math.floor(y)),(int)(Math.floor(z))).z);
                             
                             if(normalVec[0]!=normalVec[0]) {
-                                //???????????????
+                                //??????????????? sometimes normalVec is not a number, to fix
                                 shadedColor.r = 1;
                                 shadedColor.g = 0;
                                 shadedColor.b = 0;
@@ -505,9 +505,15 @@ public class RaycastRenderer extends Renderer implements TFChangeListener {
                                 double LN = VectorMath.dotproduct(lightVec, normalVec);
                                 double NH = VectorMath.dotproduct(H, normalVec);
                                 
-                                shadedColor.r = ka*voxelColor.r+(kd*LN*voxelColor.r+lightColor.r*ks*Math.pow(NH,alpha));
-                                shadedColor.g = ka*voxelColor.g+(kd*LN*voxelColor.g+lightColor.g*ks*Math.pow(NH,alpha));
-                                shadedColor.b = ka*voxelColor.b+(kd*LN*voxelColor.b+lightColor.b*ks*Math.pow(NH,alpha));
+                                if(LN > 0 && NH > 0){
+                                    shadedColor.r = ka*voxelColor.r+(kd*LN*lightColor.r+lightColor.r*ks*Math.pow(NH,alpha));
+                                    shadedColor.g = ka*voxelColor.g+(kd*LN*lightColor.g+lightColor.g*ks*Math.pow(NH,alpha));
+                                    shadedColor.b = ka*voxelColor.b+(kd*LN*lightColor.b+lightColor.b*ks*Math.pow(NH,alpha));
+                                } else {
+                                    shadedColor.r = voxelColor.r;
+                                    shadedColor.g = voxelColor.g;
+                                    shadedColor.b = voxelColor.b;
+                                }
                             }
 //System.out.println(" vox: "+voxelColor+" shad: "+shadedColor);
                         }
